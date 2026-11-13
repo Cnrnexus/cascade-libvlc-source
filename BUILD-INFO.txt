@@ -1,0 +1,13 @@
+image: registry.videolan.org/vlc-debian-win64-3.0:20251208092116
+vlc_ref: 3.0.23-2
+vlc_sha: 79128878ddb2c280bbb6c89c76a46b31a80ade1c
+build: extras/package/win32/build.sh -a x86_64 -r -z -i z -o <prefix> -c
+
+CONTRIBFLAGS: --disable-gpl --enable-ad-clauses --disable-disc --disable-zvbi --disable-protobuf --disable-aom --disable-vpx --disable-goom --disable-projectM --disable-schroedinger --disable-shout --disable-cddb --disable-mpcdec --disable-caca --disable-SDL_image --disable-chromaprint
+
+CONFIGFLAGS: --disable-update-check --disable-lua --disable-faad --disable-a52 --disable-dca --disable-mad --disable-libmpeg2 --disable-postproc --disable-samplerate --disable-x264 --disable-x26410b --disable-x265 --disable-sid --disable-vnc --disable-realrtsp --disable-mpc --disable-zvbi --enable-telx --disable-dvdread --disable-dvdnav --disable-bluray --disable-libcddb --disable-vcd --disable-goom --disable-projectm --disable-vsxu --disable-shout --disable-schroedinger --disable-caca --disable-chromecast --disable-aom --disable-vpx --disable-sdl-image --disable-chromaprint
+
+Plugins not shipped (GPL sources): access_realrtsp audioscrobbler dolby_surround_decoder dshow dtv
+export file_logger headphone_channel_mixer hqdn3d i420_rgb_mmx logger mono mpc real remoteosd
+rotate smb stats t140 vod_rtsp wma_fixed, plus GPL contrib wrappers (a52 dca faad mad libmpeg2
+dvdnav dvdread postproc samplerate sid x264 x265 zvbi) which are not built.

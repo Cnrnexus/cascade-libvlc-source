@@ -1,0 +1,60 @@
+name: Publish corresponding source
+
+on:
+  workflow_dispatch:
+    inputs:
+      vlc_ref:
+        description: VLC tag
+        required: true
+        default: '3.0.23-2'
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Clone VLC and apply the Cascade patch
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 -b "${{ inputs.vlc_ref }}" https://code.videolan.org/videolan/vlc.git vlc \
+            || git clone --depth 1 -b "${{ inputs.vlc_ref }}" https://github.com/videolan/vlc.git vlc
+          git -C vlc apply --whitespace=nowarn "$GITHUB_WORKSPACE/cascade-vlc.patch"
+          git -C vlc status --short
+
+      - name: Fetch every contrib source archive the build uses
+        run: |
+          set -euxo pipefail
+          FLAGS="$(grep '^CONTRIBFLAGS:' BUILD-INFO.txt | cut -d: -f2-)"
+          mkdir -p vlc/contrib/fetch-win64
+          cd vlc/contrib/fetch-win64
+          ../bootstrap --host=x86_64-w64-mingw32 $FLAGS
+          make -j4 -k fetch || true
+          ls ../tarballs | tee "$GITHUB_WORKSPACE/contrib-tarballs-list.txt"
+
+      - name: Package
+        run: |
+          set -euxo pipefail
+          REF="${{ inputs.vlc_ref }}"
+          mkdir -p dist
+          tar --exclude=contrib/tarballs --exclude=contrib/fetch-win64 --exclude=.git \
+            -czf "dist/vlc-${REF}-cascade-lgpl.tar.gz" --transform "s,^vlc,vlc-${REF}-cascade-lgpl," vlc
+          tar -cf "dist/vlc-contrib-tarballs-${REF}.tar" -C vlc/contrib tarballs
+          cp cascade-vlc.patch BUILD-INFO.txt contrib-tarballs-list.txt dist/
+          ls -la dist
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euxo pipefail
+          REF="${{ inputs.vlc_ref }}"
+          TAG="libvlc-${REF}-lgpl"
+          gh release delete "$TAG" -y --cleanup-tag || true
+          gh release create "$TAG" dist/* \
+            --title "libVLC ${REF} (LGPL-only) corresponding source" \
+            --notes "Corresponding source for the libVLC ${REF} binaries shipped with Cascade IPTV for Windows. See README and BUILD-INFO.txt."
